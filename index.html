@@ -2,187 +2,186 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Fixed Admin Chat - Dat Edition</title>
+    <title>Management System - Blacklist Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { 
-            --bg: #0f172a; --panel: #1e293b; --chat: #0f172a; --text: #f8fafc; 
-            --accent: #38bdf8; --my-msg: #38bdf8; --other-msg: #334155; --border: #334155; 
-            --danger: #ef4444;
-        }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
-        .app-wrapper { display: grid; grid-template-columns: 320px 1fr 350px; height: 100vh; gap: 1px; background: var(--border); }
-        section { background: var(--panel); display: flex; flex-direction: column; overflow: hidden; }
-        .header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
-        .scroll { flex: 1; overflow-y: auto; padding: 20px; }
-        .room-card { background: var(--bg); padding: 15px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border); }
-        .room-card.active { border: 2px solid var(--accent); }
-        .delete-action-btn { background: var(--danger); color: white; border: none; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: bold; margin-top: 8px; }
-        .msg-list { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 15px; }
-        .msg { max-width: 75%; padding: 12px 18px; border-radius: 20px; }
-        .msg.mine { align-self: flex-end; background: var(--my-msg); color: #000; border-bottom-right-radius: 4px; }
-        .msg.other { align-self: flex-start; background: var(--other-msg); color: var(--text); border-bottom-left-radius: 4px; }
-        .input-area { padding: 20px; background: var(--chat); }
-        .bar { display: flex; align-items: center; background: var(--panel); border-radius: 30px; padding: 5px 20px; border: 1px solid var(--border); }
-        .bar input { flex: 1; border: none; background: transparent; padding: 12px; color: var(--text); outline: none; }
-        .btn { background: var(--accent); color: #000; border: none; border-radius: 20px; padding: 10px 20px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
+        :root { --bg: #0f172a; --panel: #1e293b; --text: #f8fafc; --accent: #38bdf8; --danger: #ef4444; }
+        body { margin: 0; font-family: sans-serif; background: var(--bg); color: var(--text); display: grid; grid-template-columns: 320px 1fr 350px; height: 100vh; overflow: hidden; }
+        section { background: var(--panel); display: flex; flex-direction: column; border-right: 1px solid #334155; overflow: hidden; }
+        .scroll { flex: 1; overflow-y: auto; padding: 20px; scrollbar-width: none; }
+        .scroll::-webkit-scrollbar { display: none; }
+        .card { background: #0f172a; padding: 15px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #334155; }
+        input { width: 100%; padding: 10px; margin-bottom: 10px; background: #0f172a; color: white; border: 1px solid #334155; box-sizing: border-box; }
+        .btn { width: 100%; background: var(--accent); color: #000; border: none; padding: 10px; cursor: pointer; font-weight: bold; border-radius: 5px; }
+        .admin-btn { font-size: 0.7rem; padding: 4px; cursor: pointer; border-radius: 3px; border: none; color: white; }
+        .ban-notice { color: var(--danger); font-weight: bold; border: 2px solid var(--danger); padding: 10px; border-radius: 10px; text-align: center; }
         .hidden { display: none !important; }
-        .discord-box { background: #5865F2; color: white; padding: 15px; border-radius: 12px; text-align: center; cursor: pointer; font-weight: bold; }
-        input[type="text"], input[type="password"] { width: 100%; background: var(--bg); border: 1px solid var(--border); color: white; padding: 10px; border-radius: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
-<div class="app-wrapper">
-    <section>
-        <div class="header">Rooms</div>
-        <div class="scroll">
-            <div style="font-size:0.8rem; text-align:right; color:var(--accent);">Rooms: <span id="room-count">0</span>/10</div>
-            <div id="create-area" style="background: var(--bg); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
-                <input type="text" id="new-room-name" placeholder="部屋名">
-                <input type="password" id="new-room-pass" placeholder="パスワード(任意)">
-                <button class="btn" onclick="createRoom()">＋ 部屋作成</button>
-            </div>
-            <div id="room-list"></div>
+<section>
+    <div style="padding:20px; border-bottom:1px solid #334155;">Rooms</div>
+    <div class="scroll">
+        <div id="create-box" class="card">
+            <input type="text" id="r-name" placeholder="部屋名">
+            <button class="btn" onclick="createRoom()">＋ 部屋作成</button>
         </div>
-    </section>
+        <div id="room-list"></div>
+    </div>
+</section>
 
-    <section style="background: var(--chat);">
-        <div class="header"><span id="room-title">部屋を選択</span></div>
-        <div id="message-list" class="msg-list"></div>
-        <div class="input-area">
-            <div class="bar">
-                <input type="text" id="chat-input" placeholder="メッセージ..." onkeypress="if(event.key==='Enter') sendMsg()">
-                <button class="btn" style="width: 80px; margin: 0;" onclick="sendMsg()">送信</button>
-            </div>
-        </div>
-    </section>
+<section style="background:#0f172a;">
+    <div id="room-title" style="padding:20px; border-bottom:1px solid #334155;">部屋未選択</div>
+    <div id="msg-list" class="scroll" style="padding:20px;"></div>
+    <div style="padding:20px; background:var(--panel);">
+        <input type="text" id="chat-in" placeholder="メッセージ..." onkeypress="if(event.key==='Enter') send()">
+    </div>
+</section>
 
-    <section>
-        <div class="header">Settings & Admin</div>
-        <div class="scroll">
-            <div id="auth-section" style="background: var(--bg); padding: 15px; border-radius: 15px; margin-bottom: 25px;">
-                <h4>Admin Login</h4>
-                <input type="password" id="admin-code" placeholder="暗号を入力">
-                <button class="btn" style="background:var(--danger); color:white;" onclick="checkAdmin()">認証</button>
-            </div>
-            <div id="admin-badge" class="hidden" style="margin-bottom: 20px; text-align: center; color: var(--danger); font-weight: bold; border: 1px solid var(--danger); padding: 10px; border-radius: 10px;">🔴 ADMIN MODE ACTIVE</div>
-            <div class="discord-box" onclick="copyDiscord()">Discord: dr.3ko_</div>
-            <p id="copy-msg" style="font-size:0.7rem; color:var(--accent); text-align:center;" class="hidden">Copied!</p>
+<section>
+    <div style="padding:20px; border-bottom:1px solid #334155;">Settings</div>
+    <div class="scroll">
+        <div id="ban-display" class="card hidden">
+            <div class="ban-notice">⚠️ あなたはサイト機能が制限されています</div>
         </div>
-    </section>
-</div>
+
+        <div class="card">
+            <h4 style="margin:0 0 10px 0">Profile</h4>
+            <input type="text" id="u-name" value="Dat" onchange="nameUpdate()">
+        </div>
+
+        <div id="auth-box" class="card">
+            <h4 style="margin:0 0 10px 0">Login</h4>
+            <input type="password" id="a-code" placeholder="暗号入力">
+            <button class="btn" onclick="auth()">認証</button>
+        </div>
+
+        <div id="admin-tools" class="hidden">
+            <div class="card">
+                <p style="font-size:0.8rem">問い合わせ: Discord dr.3ko_</p>
+                <button class="btn" style="background:var(--danger);color:#fff;" onclick="delRoom()">🗑️ 部屋削除</button>
+            </div>
+            <div class="card">
+                <h4 style="margin:0 0 10px 0">Current Users</h4>
+                <div id="user-ctrl-list" style="font-size:0.75rem;"></div>
+            </div>
+            <div class="card" style="border-color: var(--danger);">
+                <h4 style="margin:0 0 10px 0; color: var(--danger);">Blacklist</h4>
+                <div id="blacklist-ui" style="font-size:0.75rem;"></div>
+            </div>
+            <div style="text-align:center; font-size:0.8rem; opacity:0.7;">👑 総責任者: ダット</div>
+        </div>
+    </div>
+</section>
 
 <script>
-    const SUPABASE_URL = 'https://qvwfhesfjylkgmoscwsa.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_Z-TH5yMPqJDGn2WGlzGrEQ_y8t-QAg8';
-    const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    const _sb = supabase.createClient('https://qvwfhesfjylkgmoscwsa.supabase.co', 'sb_publishable_Z-TH5yMPqJDGn2WGlzGrEQ_y8t-QAg8');
+    
+    let uid = localStorage.getItem('uid') || 'u-'+Math.random().toString(36).substr(2,9);
+    localStorage.setItem('uid', uid);
+    
+    let isSiteBanned = false;
+    let bannedRooms = JSON.parse(localStorage.getItem('br') || '[]');
+    let role = "User", myName = "Dat", curRoomId = null, channel = null;
 
-    let currentRoomId = null;
-    let rooms = [];
-    let isAdmin = false;
-    let messageSubscription = null;
-
-    async function fetchRooms() {
-        const { data } = await _sb.from('rooms').select('*').order('created_at', { ascending: false });
-        rooms = data || [];
-        document.getElementById('room-count').innerText = rooms.length;
-        renderRooms();
-    }
-
-    function renderRooms() {
-        const list = document.getElementById('room-list');
-        list.innerHTML = rooms.map(r => `
-            <div class="room-card ${r.id === currentRoomId ? 'active' : ''}" onclick="joinRoom('${r.id}', '${r.name}', '${r.password}')">
-                <b>${r.name} ${r.password ? '🔒' : ''}</b>
-                ${isAdmin ? `<br><button class="delete-action-btn" onclick="event.stopPropagation(); forceDeleteRoom('${r.id}', '${r.name}')">🗑️ 部屋を削除</button>` : ''}
-            </div>
-        `).join('');
-    }
-
-    async function createRoom() {
-        if(rooms.length >= 10) return alert("最大10部屋です");
-        const name = document.getElementById('new-room-name').value;
-        const pass = document.getElementById('new-room-pass').value;
-        if(!name) return;
-        await _sb.from('rooms').insert([{ name, password: pass || null, host_id: 'Dat' }]);
-        fetchRooms();
-    }
-
-    async function joinRoom(id, name, pass) {
-        if(pass && pass !== 'null' && !isAdmin) {
-            if(prompt("パスワード:") !== pass) return alert("不一致");
+    async function checkSiteBan() {
+        const { data } = await _sb.from('banned_users').select('uid').eq('uid', uid).single();
+        if(data) {
+            isSiteBanned = true;
+            document.getElementById('ban-display').classList.remove('hidden');
         }
-        currentRoomId = id;
-        document.getElementById('room-title').innerText = name;
-        
-        // 以前の購読を解除
-        if (messageSubscription) _sb.removeChannel(messageSubscription);
-        
-        fetchMessages();
+    }
 
-        // リアルタイム購読を最新化
-        messageSubscription = _sb.channel(`room-${id}`)
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${id}` }, 
-            (payload) => {
-                appendSingleMessage(payload.new);
+    async function getRooms() {
+        const { data } = await _sb.from('rooms').select('*');
+        document.getElementById('room-list').innerHTML = data.map(r => `<div class="card" onclick="joinRoom('${r.id}','${r.name}')" style="cursor:pointer;">${r.name}</div>`).join('');
+    }
+
+    function auth() {
+        if(isSiteBanned) return alert("BAN中は不可");
+        const c = document.getElementById('a-code').value;
+        if(c === 'datto0n0can') role = "Admin";
+        else if(c === 'datto0n0fuku') role = "Fuku";
+        else return alert("Invalid");
+        document.getElementById('admin-tools').classList.remove('hidden');
+        document.getElementById('auth-box').classList.add('hidden');
+        updateBlacklistUI();
+        if(curRoomId) sync();
+    }
+
+    function joinRoom(id, n) {
+        if(isSiteBanned) return alert("サイトからBANされています");
+        if(bannedRooms.includes(id)) return alert("部屋から追放されています");
+        curRoomId = id; document.getElementById('room-title').innerText = n;
+        if(channel) _sb.removeChannel(channel);
+        channel = _sb.channel(`r-${id}`, { config: { presence: { key: myName } } })
+            .on('presence', { event: 'sync' }, () => updateAdminUI())
+            .on('broadcast', { event: 'kick' }, p => {
+                if(p.payload.uid === uid) {
+                    bannedRooms.push(id); localStorage.setItem('br', JSON.stringify(bannedRooms));
+                    alert("追放されました"); location.reload();
+                }
             })
-            .subscribe();
+            .on('broadcast', { event: 'site_ban' }, p => { if(p.payload.uid === uid) location.reload(); })
+            .subscribe(async (s) => { if(s === 'SUBSCRIBED') sync(); });
     }
 
-    async function sendMsg() {
-        if(!currentRoomId) return alert("部屋を選んで");
-        const content = document.getElementById('chat-input').value;
-        if(!content) return;
-        await _sb.from('messages').insert([{ room_id: currentRoomId, user_name: 'Dat', content }]);
-        document.getElementById('chat-input').value = '';
-    }
+    async function sync() { if(channel) await channel.track({ uid, role }); }
 
-    async function fetchMessages() {
-        const { data } = await _sb.from('messages').select('*').eq('room_id', currentRoomId).order('created_at', { ascending: true });
-        const list = document.getElementById('message-list');
-        list.innerHTML = (data || []).map(m => createMessageHTML(m)).join('');
-        list.scrollTop = list.scrollHeight;
-    }
-
-    function createMessageHTML(m) {
-        return `<div class="msg ${m.user_name === 'Dat' ? 'mine' : 'other'}">
-                    <div style="font-size:0.7rem; opacity:0.6;">${m.user_name}</div>
-                    <div>${m.content}</div>
+    function updateAdminUI() {
+        if(role === "User") return;
+        const state = channel.presenceState();
+        let html = "";
+        for (const name in state) {
+            state[name].forEach(p => {
+                if(p.uid === uid) return;
+                html += `<div style="margin-bottom:8px;">${name} <br>
+                    <button class="admin-btn" style="background:orange" onclick="punish('kick','${p.uid}')">追放</button>
+                    <button class="admin-btn" style="background:red" onclick="siteBan('${p.uid}','${name}')">サイトBAN</button>
                 </div>`;
-    }
-
-    function appendSingleMessage(m) {
-        const list = document.getElementById('message-list');
-        list.innerHTML += createMessageHTML(m);
-        list.scrollTop = list.scrollHeight;
-    }
-
-    function checkAdmin() {
-        if(document.getElementById('admin-code').value === 'dat2009') {
-            isAdmin = true;
-            document.getElementById('admin-badge').classList.remove('hidden');
-            document.getElementById('auth-section').classList.add('hidden');
-            renderRooms(); // ボタンを出すために再描画
+            });
         }
+        document.getElementById('user-ctrl-list').innerHTML = html;
     }
 
-    async function forceDeleteRoom(id, name) {
-        if(confirm(`部屋「${name}」を削除しますか？`)) {
-            await _sb.from('rooms').delete().eq('id', id);
-            fetchRooms();
-        }
+    async function siteBan(targetUid, targetName) {
+        if(!confirm(targetName + " をサイトBANしますか？")) return;
+        await _sb.from('banned_users').insert([{ uid: targetUid, user_name: targetName }]);
+        channel.send({ type: 'broadcast', event: 'site_ban', payload: { uid: targetUid } });
+        updateBlacklistUI();
     }
 
-    function copyDiscord() {
-        navigator.clipboard.writeText('dr.3ko_').then(() => {
-            const msg = document.getElementById('copy-msg');
-            msg.classList.remove('hidden');
-            setTimeout(() => msg.classList.add('hidden'), 2000);
-        });
+    async function updateBlacklistUI() {
+        const { data } = await _sb.from('banned_users').select('*');
+        document.getElementById('blacklist-ui').innerHTML = data.map(u => `
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <span>${u.user_name}</span>
+                <button class="admin-btn" style="background:green" onclick="unban('${u.uid}')">解除</button>
+            </div>
+        `).join('') || "なし";
     }
 
-    window.onload = fetchRooms;
+    async function unban(targetUid) {
+        await _sb.from('banned_users').delete().eq('uid', targetUid);
+        updateBlacklistUI();
+        alert("解除しました");
+    }
+
+    function punish(type, target) { channel.send({ type: 'broadcast', event: type, payload: { uid: target } }); }
+
+    function createRoom() {
+        if(isSiteBanned) return alert("BANされています");
+        const n = document.getElementById('r-name').value;
+        if(n) _sb.from('rooms').insert([{ name: n, host_id: myName }]).then(() => getRooms());
+    }
+
+    function nameUpdate() { myName = document.getElementById('u-name').value; if(curRoomId) sync(); }
+
+    window.onload = async () => {
+        await checkSiteBan();
+        getRooms();
+    };
 </script>
 </body>
 </html>
