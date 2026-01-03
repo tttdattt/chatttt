@@ -2,142 +2,154 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Chat Dashboard</title>
+    <title>シンプルチャット</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root {
-            --bg-color: #f0f2f5; --sidebar-bg: #ffffff; --chat-bg: #ffffff;
-            --text-main: #1c1e21; --text-muted: #65676b;
-            --accent: #0084ff; --my-msg: #0084ff; --other-msg: #e4e6eb;
-            --my-text: #ffffff; --other-text: #050505;
-            --border: #dddfe2;
+        :root { 
+            --bg: #0f172a; --panel: #1e293b; --chat: #0f172a; --text: #f8fafc; 
+            --accent: #38bdf8; --my-msg: #38bdf8; --other-msg: #334155; --border: #334155; 
         }
-        body.dark-mode {
-            --bg-color: #18191a; --sidebar-bg: #242526; --chat-bg: #242526;
-            --text-main: #e4e6eb; --text-muted: #b0b3b8;
-            --accent: #2e89ff; --my-msg: #0084ff; --other-msg: #3e4042;
-            --my-text: #ffffff; --other-text: #e4e6eb;
-            --border: #3e4042;
+        .light-theme {
+            --bg: #f1f5f9; --panel: #ffffff; --chat: #f8fafc; --text: #0f172a; 
+            --accent: #0284c7; --my-msg: #0284c7; --other-msg: #e2e8f0; --border: #cbd5e1;
         }
-
-        body { margin: 0; font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-main); transition: 0.3s; overflow: hidden; }
-        
-        /* 画面全体を使った3カラムレイアウト */
-        .app-wrapper { display: grid; grid-template-columns: 300px 1fr 350px; height: 100vh; gap: 1px; background: var(--border); }
-
-        /* 各セクションの共通設定 */
-        section { background: var(--sidebar-bg); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
-
-        /* ヘッダー周り */
-        .panel-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 1.1rem; }
-
-        /* 洗練されたモード切替スイッチ */
-        .theme-switch { position: relative; width: 50px; height: 26px; cursor: pointer; }
-        .theme-switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: var(--accent); }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; transition: 0.3s; }
+        .app-wrapper { display: grid; grid-template-columns: 320px 1fr 350px; height: 100vh; gap: 1px; background: var(--border); }
+        section { background: var(--panel); display: flex; flex-direction: column; overflow: hidden; }
+        .header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 1.2rem; }
+        .scroll { flex: 1; overflow-y: auto; padding: 20px; }
+        .room-card { background: var(--bg); padding: 12px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .room-card:hover { border-color: var(--accent); }
+        .room-limit { font-size: 0.8rem; text-align: right; color: var(--accent); margin-bottom: 10px; }
+        .msg-list { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 15px; }
+        .msg { max-width: 75%; padding: 12px 18px; border-radius: 20px; font-size: 1rem; line-height: 1.5; }
+        .msg.mine { align-self: flex-end; background: var(--my-msg); color: #000; border-bottom-right-radius: 4px; }
+        .msg.other { align-self: flex-start; background: var(--other-msg); color: var(--text); border-bottom-left-radius: 4px; }
+        .input-area { padding: 20px; background: var(--chat); }
+        .bar { display: flex; align-items: center; background: var(--panel); border-radius: 30px; padding: 5px 20px; border: 1px solid var(--border); }
+        .bar input { flex: 1; border: none; background: transparent; padding: 12px; color: var(--text); outline: none; }
+        .switch { width: 50px; height: 26px; position: relative; cursor: pointer; }
+        .switch input { opacity: 0; }
+        .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #475569; border-radius: 30px; transition: 0.4s; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background: white; border-radius: 50%; transition: 0.4s; }
+        input:checked + .slider { background: var(--accent); }
         input:checked + .slider:before { transform: translateX(24px); }
-
-        /* チャットエリア */
-        #chat-main { background: var(--chat-bg); }
-        #message-list { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 15px; }
-        
-        .msg { max-width: 70%; padding: 12px 18px; border-radius: 20px; font-size: 1rem; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .msg.mine { align-self: flex-end; background: var(--my-msg); color: var(--my-text); border-bottom-right-radius: 4px; }
-        .msg.other { align-self: flex-start; background: var(--other-msg); color: var(--other-text); border-bottom-left-radius: 4px; }
-
-        /* 丸角メッセージバー（洗練版） */
-        .input-area { padding: 20px; border-top: 1px solid var(--border); }
-        .bar-wrapper { display: flex; align-items: center; background: var(--bg-color); border-radius: 30px; padding: 5px 20px; gap: 10px; }
-        input[type="text"] { flex: 1; border: none; background: transparent; padding: 12px; color: var(--text-main); outline: none; font-size: 1rem; }
-
-        /* 管理・設定エリア */
-        .admin-panel { border-left: 1px solid var(--border); }
-        .scroll-v { flex: 1; overflow-y: auto; padding: 20px; }
-        .card { background: var(--bg-color); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--border); }
-        
-        button { cursor: pointer; border: none; border-radius: 8px; padding: 10px 15px; font-weight: 600; transition: 0.2s; }
-        .btn-primary { background: var(--accent); color: white; }
-        .btn-danger { background: #fa3e3e; color: white; margin-top: 5px; }
-
+        .btn { background: var(--accent); color: #000; border: none; border-radius: 20px; padding: 10px 20px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
         .hidden { display: none !important; }
+        input[type="text"], input[type="password"] { width: 100%; background: var(--bg); border: 1px solid var(--border); color: white; padding: 10px; border-radius: 10px; margin-top: 5px; box-sizing: border-box; }
     </style>
 </head>
-<body class="light-mode">
+<body>
 
-    <div class="app-wrapper">
-        <section id="rooms-sidebar">
-            <div class="panel-header">Rooms</div>
-            <div class="scroll-v">
-                <div class="card">
-                    <h4>部屋を作成</h4>
-                    <input type="text" placeholder="Room Name" style="width:100%; margin-bottom:10px;">
-                    <button class="btn-primary" style="width:100%;">Create Room</button>
-                </div>
-                <div id="room-list-container">
-                    </div>
+<div class="app-wrapper">
+    <section>
+        <div class="header">Rooms</div>
+        <div class="scroll">
+            <div class="room-limit">Room Limit: <span id="room-count">0</span>/10</div>
+            <div id="create-area" style="margin-bottom: 20px; background: var(--bg); padding: 15px; border-radius: 15px;">
+                <input type="text" id="new-room-name" placeholder="部屋名">
+                <input type="password" id="new-room-pass" placeholder="入室パスワード (任意)">
+                <button class="btn" onclick="createRoom()">Create New Room</button>
             </div>
-        </section>
+            <div id="room-list"></div>
+        </div>
+    </section>
 
-        <section id="chat-main">
-            <div class="panel-header">
-                <span id="active-room-name">Global Chat</span>
-                <label class="theme-switch">
-                    <input type="checkbox" onchange="toggleTheme()">
-                    <span class="slider"></span>
-                </label>
+    <section style="background: var(--chat);">
+        <div class="header">
+            <span id="current-room">Main Lobby</span>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <label class="switch"><input type="checkbox" id="mode-toggle" onchange="toggleTheme()"><span class="slider"></span></label>
+                <span style="cursor:pointer;" onclick="alert('設定は右パネルの下の方にあるよ')">⚙️</span>
             </div>
-            <div id="message-list">
-                <div class="msg other">27インチモニターならこの広さが快適だね！</div>
-                <div class="msg mine">モード切替もスムーズ。これが洗練されたデザイン。</div>
+        </div>
+        <div id="message-list" class="msg-list"></div>
+        <div class="input-area">
+            <div class="bar">
+                <label style="cursor:pointer;">📷<input type="file" hidden id="img-upload"></label>
+                <input type="text" id="chat-input" placeholder="メッセージを入力...">
+                <button class="btn" style="width: 80px; margin: 0;" onclick="sendMsg()">送信</button>
             </div>
-            <div class="input-area">
-                <div class="bar-wrapper">
-                    <label style="cursor:pointer; font-size:1.2rem;">📷<input type="file" hidden></label>
-                    <input type="text" id="main-input" placeholder="メッセージを入力...">
-                    <button class="btn-primary">送信</button>
-                </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="header">Settings & Admin</div>
+        <div class="scroll">
+            <div id="auth-section" style="background: var(--bg); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
+                <h4>Settings</h4>
+                <p style="font-size:0.7rem; opacity:0.6; margin-bottom:10px;">色モードや権限の設定</p>
+                <input type="password" id="admin-code" placeholder="管理者用暗号を入力">
+                <button class="btn" style="background:#ef4444; color:white;" onclick="checkAdmin()">Authenticate</button>
             </div>
-        </section>
 
-        <section id="admin-panel">
-            <div class="panel-header">Settings & Admin</div>
-            <div class="scroll-v">
-                <div class="card">
-                    <h4>Host Controls</h4>
-                    <div id="player-list">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <span>User_Dat</span>
-                            <button class="btn-danger" style="font-size:11px;">Kick</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="admin-tools" class="card">
-                    <h4 style="color:#fa3e3e;">Admin Dashboard</h4>
-                    <p style="font-size:13px;">問い合わせ一覧:</p>
-                    <div id="inquiry-list" style="font-size:12px; background:rgba(0,0,0,0.05); padding:10px; border-radius:8px;">
-                        <p><b>UserA:</b> ログインできない <button style="font-size:10px;">返信</button></p>
-                    </div>
-                    <p style="font-size:13px; margin-top:15px;">BANユーザー管理:</p>
-                    <button class="btn-danger" style="width:100%; font-size:12px;">BANリストを開く</button>
-                </div>
-
-                <div class="card">
-                    <h4>Contact Support</h4>
-                    <textarea placeholder="管理者にメッセージ" style="width:100%; height:60px; border-radius:8px; border:1px solid var(--border); padding:10px;"></textarea>
-                    <button class="btn-primary" style="width:100%; margin-top:10px;">Send Inquiry</button>
+            <div id="admin-panel" class="hidden">
+                <div style="border: 2px solid #ef4444; padding: 15px; border-radius: 15px; margin-bottom: 20px;">
+                    <h4 style="color:#ef4444;">Shared Admin Panel</h4>
+                    <p style="font-size:0.8rem;">全ての問い合わせを共有中</p>
+                    <div id="inquiry-list" style="font-size:0.8rem; margin-bottom:10px;"></div>
+                    <button class="btn" style="background:#ef4444; color:white;">User BAN List</button>
                 </div>
             </div>
-        </section>
-    </div>
 
-    <script>
-        function toggleTheme() {
-            document.body.classList.toggle('dark-mode');
+            <div class="card" style="background: var(--bg); padding: 15px; border-radius: 15px;">
+                <h4>Support</h4>
+                <textarea id="inquiry-text" style="width:100%; height:80px; background:var(--panel); border:1px solid var(--border); color:white; border-radius:10px; padding:10px;" placeholder="管理者に問い合わせ"></textarea>
+                <button class="btn" onclick="alert('送信完了（全管理者が閲覧可能）')">Send Inquiry</button>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+    // ダットのSupabase情報
+    const SUPABASE_URL = 'https://qvwfhesfjylkgmoscwsa.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_Z-TH5yMPqJDGn2WGlzGrEQ_y8t-QAg8';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    let rooms = [];
+    const ADMIN_SECRET = "dat2009"; // 管理者用暗号
+
+    function toggleTheme() { document.body.classList.toggle('light-theme'); }
+
+    async function createRoom() {
+        if(rooms.length >= 10) return alert("部屋は10個まで！");
+        const name = document.getElementById('new-room-name').value;
+        const pass = document.getElementById('new-room-pass').value;
+        if(!name) return;
+        const { error } = await _supabase.from('rooms').insert([{ name: name, password: pass || null, host_id: 'Dat' }]);
+        if(!error) { fetchRooms(); document.getElementById('new-room-name').value = ''; }
+    }
+
+    async function fetchRooms() {
+        const { data } = await _supabase.from('rooms').select('*');
+        rooms = data || [];
+        document.getElementById('room-count').innerText = rooms.length;
+        document.getElementById('room-list').innerHTML = rooms.map(r => `
+            <div class="room-card" onclick="joinRoom('${r.id}', '${r.password}')">
+                <span>${r.name} ${r.password ? '🔒' : ''}</span>
+                <span style="font-size:0.7rem; opacity:0.5;">ID: ${r.id.substring(0,5)}</span>
+            </div>
+        `).join('');
+    }
+
+    function joinRoom(id, pass) {
+        if(pass && pass !== "null") {
+            if(prompt("入室パスワード:") !== pass) return alert("不一致");
         }
-    </script>
+        document.getElementById('current-room').innerText = "Room ID: " + id.substring(0,8);
+        alert("入室成功。ホスト権限は自動付与されます。");
+    }
+
+    function checkAdmin() {
+        if(document.getElementById('admin-code').value === ADMIN_SECRET) {
+            document.getElementById('admin-panel').classList.remove('hidden');
+            document.getElementById('auth-section').classList.add('hidden');
+            alert("管理者認証成功");
+        }
+    }
+
+    fetchRooms();
+</script>
 </body>
 </html>
