@@ -3,70 +3,141 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>シンプルチャット</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Advanced Chat Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-color: #f0f2f5; --sidebar-bg: #ffffff; --chat-bg: #ffffff;
+            --text-main: #1c1e21; --text-muted: #65676b;
+            --accent: #0084ff; --my-msg: #0084ff; --other-msg: #e4e6eb;
+            --my-text: #ffffff; --other-text: #050505;
+            --border: #dddfe2;
+        }
+        body.dark-mode {
+            --bg-color: #18191a; --sidebar-bg: #242526; --chat-bg: #242526;
+            --text-main: #e4e6eb; --text-muted: #b0b3b8;
+            --accent: #2e89ff; --my-msg: #0084ff; --other-msg: #3e4042;
+            --my-text: #ffffff; --other-text: #e4e6eb;
+            --border: #3e4042;
+        }
+
+        body { margin: 0; font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg-color); color: var(--text-main); transition: 0.3s; overflow: hidden; }
+        
+        /* 画面全体を使った3カラムレイアウト */
+        .app-wrapper { display: grid; grid-template-columns: 300px 1fr 350px; height: 100vh; gap: 1px; background: var(--border); }
+
+        /* 各セクションの共通設定 */
+        section { background: var(--sidebar-bg); display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+        /* ヘッダー周り */
+        .panel-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 1.1rem; }
+
+        /* 洗練されたモード切替スイッチ */
+        .theme-switch { position: relative; width: 50px; height: 26px; cursor: pointer; }
+        .theme-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider:before { transform: translateX(24px); }
+
+        /* チャットエリア */
+        #chat-main { background: var(--chat-bg); }
+        #message-list { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 15px; }
+        
+        .msg { max-width: 70%; padding: 12px 18px; border-radius: 20px; font-size: 1rem; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .msg.mine { align-self: flex-end; background: var(--my-msg); color: var(--my-text); border-bottom-right-radius: 4px; }
+        .msg.other { align-self: flex-start; background: var(--other-msg); color: var(--other-text); border-bottom-left-radius: 4px; }
+
+        /* 丸角メッセージバー（洗練版） */
+        .input-area { padding: 20px; border-top: 1px solid var(--border); }
+        .bar-wrapper { display: flex; align-items: center; background: var(--bg-color); border-radius: 30px; padding: 5px 20px; gap: 10px; }
+        input[type="text"] { flex: 1; border: none; background: transparent; padding: 12px; color: var(--text-main); outline: none; font-size: 1rem; }
+
+        /* 管理・設定エリア */
+        .admin-panel { border-left: 1px solid var(--border); }
+        .scroll-v { flex: 1; overflow-y: auto; padding: 20px; }
+        .card { background: var(--bg-color); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--border); }
+        
+        button { cursor: pointer; border: none; border-radius: 8px; padding: 10px 15px; font-weight: 600; transition: 0.2s; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-danger { background: #fa3e3e; color: white; margin-top: 5px; }
+
+        .hidden { display: none !important; }
+    </style>
 </head>
-<body class="light-mode"> <div id="home-screen" class="container">
-        <header>
-            <h1>Chat Lobby</h1>
-            <button id="theme-toggle">🌙 モード切替</button>
-        </header>
+<body class="light-mode">
 
-        <section class="form-section">
-            <h2>部屋を作成する</h2>
-            <input type="text" id="new-room-name" placeholder="部屋名を入力">
-            <input type="password" id="new-room-pass" placeholder="パスワード (任意)">
-            <label><input type="checkbox" id="is-public" checked> 公開する</label>
-            <button id="create-room-btn" class="primary-btn">作成して入室</button>
-        </section>
-
-        <hr>
-
-        <section class="list-section">
-            <h2>公開中の部屋</h2>
-            <div id="room-list">
-                <p>読み込み中...</p>
+    <div class="app-wrapper">
+        <section id="rooms-sidebar">
+            <div class="panel-header">Rooms</div>
+            <div class="scroll-v">
+                <div class="card">
+                    <h4>部屋を作成</h4>
+                    <input type="text" placeholder="Room Name" style="width:100%; margin-bottom:10px;">
+                    <button class="btn-primary" style="width:100%;">Create Room</button>
+                </div>
+                <div id="room-list-container">
+                    </div>
             </div>
         </section>
 
-        <footer class="admin-footer">
-            <button id="inquiry-btn">お問い合わせ</button>
-        </footer>
-    </div>
-
-    <div id="chat-screen" class="container hidden">
-        <header class="chat-header">
-            <button id="back-to-lobby">← 戻る</button>
-            <h2 id="current-room-name">部屋名</h2>
-            <button id="host-controls-btn" class="hidden">Host Settings</button>
-        </header>
-
-        <main id="chat-messages">
-            </main>
-
-        <footer class="chat-input-area">
-            <div class="input-wrapper">
-                <label for="image-upload" class="upload-label">📷
-                    <input type="file" id="image-upload" accept="image/*" hidden>
+        <section id="chat-main">
+            <div class="panel-header">
+                <span id="active-room-name">Global Chat</span>
+                <label class="theme-switch">
+                    <input type="checkbox" onchange="toggleTheme()">
+                    <span class="slider"></span>
                 </label>
-                <input type="text" id="message-input" placeholder="メッセージを入力...">
-                <button id="send-btn">送信</button>
             </div>
-        </footer>
+            <div id="message-list">
+                <div class="msg other">27インチモニターならこの広さが快適だね！</div>
+                <div class="msg mine">モード切替もスムーズ。これが洗練されたデザイン。</div>
+            </div>
+            <div class="input-area">
+                <div class="bar-wrapper">
+                    <label style="cursor:pointer; font-size:1.2rem;">📷<input type="file" hidden></label>
+                    <input type="text" id="main-input" placeholder="メッセージを入力...">
+                    <button class="btn-primary">送信</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="admin-panel">
+            <div class="panel-header">Settings & Admin</div>
+            <div class="scroll-v">
+                <div class="card">
+                    <h4>Host Controls</h4>
+                    <div id="player-list">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span>User_Dat</span>
+                            <button class="btn-danger" style="font-size:11px;">Kick</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="admin-tools" class="card">
+                    <h4 style="color:#fa3e3e;">Admin Dashboard</h4>
+                    <p style="font-size:13px;">問い合わせ一覧:</p>
+                    <div id="inquiry-list" style="font-size:12px; background:rgba(0,0,0,0.05); padding:10px; border-radius:8px;">
+                        <p><b>UserA:</b> ログインできない <button style="font-size:10px;">返信</button></p>
+                    </div>
+                    <p style="font-size:13px; margin-top:15px;">BANユーザー管理:</p>
+                    <button class="btn-danger" style="width:100%; font-size:12px;">BANリストを開く</button>
+                </div>
+
+                <div class="card">
+                    <h4>Contact Support</h4>
+                    <textarea placeholder="管理者にメッセージ" style="width:100%; height:60px; border-radius:8px; border:1px solid var(--border); padding:10px;"></textarea>
+                    <button class="btn-primary" style="width:100%; margin-top:10px;">Send Inquiry</button>
+                </div>
+            </div>
+        </section>
     </div>
 
-    <div id="modal" class="modal hidden">
-        <div class="modal-content">
-            <h3 id="modal-title">確認</h3>
-            <div id="modal-body"></div>
-            <div class="modal-buttons">
-                <button id="modal-cancel">キャンセル</button>
-                <button id="modal-confirm" class="primary-btn">決定</button>
-            </div>
-        </div>
-    </div>
-
-    <script type="module" src="js/main.js"></script>
+    <script>
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+        }
+    </script>
 </body>
 </html>
