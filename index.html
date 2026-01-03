@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>シンプルチャット</title>
+    <title>Fixed Admin Chat - Dat Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { 
@@ -10,42 +10,25 @@
             --accent: #38bdf8; --my-msg: #38bdf8; --other-msg: #334155; --border: #334155; 
             --danger: #ef4444;
         }
-        .light-theme {
-            --bg: #f1f5f9; --panel: #ffffff; --chat: #f8fafc; --text: #0f172a; 
-            --accent: #0284c7; --my-msg: #0284c7; --other-msg: #e2e8f0; --border: #cbd5e1;
-        }
-        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; transition: 0.3s; }
+        body { margin: 0; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
         .app-wrapper { display: grid; grid-template-columns: 320px 1fr 350px; height: 100vh; gap: 1px; background: var(--border); }
         section { background: var(--panel); display: flex; flex-direction: column; overflow: hidden; }
-        .header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 1.2rem; }
+        .header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
         .scroll { flex: 1; overflow-y: auto; padding: 20px; }
-        
-        /* 部屋リストと目立つ削除ボタン */
-        .room-card { background: var(--bg); padding: 15px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border); transition: 0.2s; position: relative; }
-        .room-card:hover { border-color: var(--accent); }
-        .room-card.active { border: 2px solid var(--accent); background: var(--panel); }
-        
-        .delete-action-btn { 
-            background: var(--danger); color: white; border: none; border-radius: 8px; 
-            font-size: 0.75rem; padding: 6px 12px; cursor: pointer; font-weight: bold;
-            margin-top: 8px; display: block; width: fit-content; transition: 0.2s;
-        }
-        .delete-action-btn:hover { background: #b91c1c; transform: scale(1.05); }
-        
+        .room-card { background: var(--bg); padding: 15px; border-radius: 12px; margin-bottom: 10px; cursor: pointer; border: 1px solid var(--border); }
+        .room-card.active { border: 2px solid var(--accent); }
+        .delete-action-btn { background: var(--danger); color: white; border: none; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: bold; margin-top: 8px; }
         .msg-list { flex: 1; overflow-y: auto; padding: 25px; display: flex; flex-direction: column; gap: 15px; }
-        .msg { max-width: 75%; padding: 12px 18px; border-radius: 20px; font-size: 1rem; line-height: 1.5; }
+        .msg { max-width: 75%; padding: 12px 18px; border-radius: 20px; }
         .msg.mine { align-self: flex-end; background: var(--my-msg); color: #000; border-bottom-right-radius: 4px; }
         .msg.other { align-self: flex-start; background: var(--other-msg); color: var(--text); border-bottom-left-radius: 4px; }
-        
         .input-area { padding: 20px; background: var(--chat); }
         .bar { display: flex; align-items: center; background: var(--panel); border-radius: 30px; padding: 5px 20px; border: 1px solid var(--border); }
         .bar input { flex: 1; border: none; background: transparent; padding: 12px; color: var(--text); outline: none; }
-        
         .btn { background: var(--accent); color: #000; border: none; border-radius: 20px; padding: 10px 20px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
         .hidden { display: none !important; }
-        
         .discord-box { background: #5865F2; color: white; padding: 15px; border-radius: 12px; text-align: center; cursor: pointer; font-weight: bold; }
-        input[type="text"], input[type="password"] { width: 100%; background: var(--bg); border: 1px solid var(--border); color: white; padding: 10px; border-radius: 10px; margin-top: 5px; box-sizing: border-box; }
+        input[type="text"], input[type="password"] { width: 100%; background: var(--bg); border: 1px solid var(--border); color: white; padding: 10px; border-radius: 10px; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -54,26 +37,22 @@
     <section>
         <div class="header">Rooms</div>
         <div class="scroll">
-            <div style="font-size:0.8rem; text-align:right; color:var(--accent); margin-bottom:10px;">Rooms: <span id="room-count">0</span>/10</div>
+            <div style="font-size:0.8rem; text-align:right; color:var(--accent);">Rooms: <span id="room-count">0</span>/10</div>
             <div id="create-area" style="background: var(--bg); padding: 15px; border-radius: 15px; margin-bottom: 20px;">
-                <input type="text" id="new-room-name" placeholder="部屋名を入力">
-                <input type="password" id="new-room-pass" placeholder="入室パスワード (任意)">
-                <button class="btn" onclick="createRoom()">＋ 部屋を新規作成</button>
+                <input type="text" id="new-room-name" placeholder="部屋名">
+                <input type="password" id="new-room-pass" placeholder="パスワード(任意)">
+                <button class="btn" onclick="createRoom()">＋ 部屋作成</button>
             </div>
             <div id="room-list"></div>
         </div>
     </section>
 
     <section style="background: var(--chat);">
-        <div class="header">
-            <span id="room-title">部屋を選んでね</span>
-            <button onclick="document.body.classList.toggle('light-theme')" style="background:none; border:none; cursor:pointer; font-size:1.2rem;">🌓</button>
-        </div>
+        <div class="header"><span id="room-title">部屋を選択</span></div>
         <div id="message-list" class="msg-list"></div>
         <div class="input-area">
             <div class="bar">
-                <label style="cursor:pointer;">📷<input type="file" id="img-upload" hidden></label>
-                <input type="text" id="chat-input" placeholder="メッセージを入力..." onkeypress="if(event.key==='Enter') sendMsg()">
+                <input type="text" id="chat-input" placeholder="メッセージ..." onkeypress="if(event.key==='Enter') sendMsg()">
                 <button class="btn" style="width: 80px; margin: 0;" onclick="sendMsg()">送信</button>
             </div>
         </div>
@@ -84,19 +63,12 @@
         <div class="scroll">
             <div id="auth-section" style="background: var(--bg); padding: 15px; border-radius: 15px; margin-bottom: 25px;">
                 <h4>Admin Login</h4>
-                <input type="password" id="admin-code" placeholder="管理者用暗号を入力">
-                <button class="btn" style="background:var(--danger); color:white;" onclick="checkAdmin()">管理者として認証</button>
+                <input type="password" id="admin-code" placeholder="暗号を入力">
+                <button class="btn" style="background:var(--danger); color:white;" onclick="checkAdmin()">認証</button>
             </div>
-
-            <div id="admin-badge" class="hidden" style="margin-bottom: 20px; text-align: center; color: var(--danger); font-weight: bold; border: 1px solid var(--danger); padding: 10px; border-radius: 10px;">
-                🔴 ADMIN MODE ACTIVE
-            </div>
-
-            <div style="background: var(--bg); padding: 15px; border-radius: 15px;">
-                <h4 style="margin-bottom: 10px;">Support Contact</h4>
-                <div class="discord-box" onclick="copyDiscord()">Discord: dr.3ko_</div>
-                <p id="copy-msg" style="font-size:0.7rem; color:var(--accent); text-align:center; margin-top:8px;" class="hidden">Copied!</p>
-            </div>
+            <div id="admin-badge" class="hidden" style="margin-bottom: 20px; text-align: center; color: var(--danger); font-weight: bold; border: 1px solid var(--danger); padding: 10px; border-radius: 10px;">🔴 ADMIN MODE ACTIVE</div>
+            <div class="discord-box" onclick="copyDiscord()">Discord: dr.3ko_</div>
+            <p id="copy-msg" style="font-size:0.7rem; color:var(--accent); text-align:center;" class="hidden">Copied!</p>
         </div>
     </section>
 </div>
@@ -109,6 +81,7 @@
     let currentRoomId = null;
     let rooms = [];
     let isAdmin = false;
+    let messageSubscription = null;
 
     async function fetchRooms() {
         const { data } = await _sb.from('rooms').select('*').order('created_at', { ascending: false });
@@ -121,34 +94,44 @@
         const list = document.getElementById('room-list');
         list.innerHTML = rooms.map(r => `
             <div class="room-card ${r.id === currentRoomId ? 'active' : ''}" onclick="joinRoom('${r.id}', '${r.name}', '${r.password}')">
-                <div style="font-weight:bold;">${r.name} ${r.password ? '🔒' : ''}</div>
-                <div style="font-size:0.7rem; opacity:0.5;">ID: ${r.id.substring(0,8)}</div>
-                ${isAdmin ? `<button class="delete-action-btn" onclick="event.stopPropagation(); forceDeleteRoom('${r.id}', '${r.name}')">🗑️ 部屋を削除</button>` : ''}
+                <b>${r.name} ${r.password ? '🔒' : ''}</b>
+                ${isAdmin ? `<br><button class="delete-action-btn" onclick="event.stopPropagation(); forceDeleteRoom('${r.id}', '${r.name}')">🗑️ 部屋を削除</button>` : ''}
             </div>
         `).join('');
     }
 
     async function createRoom() {
-        if(rooms.length >= 10) return alert("部屋数は最大10個までです！");
+        if(rooms.length >= 10) return alert("最大10部屋です");
         const name = document.getElementById('new-room-name').value;
         const pass = document.getElementById('new-room-pass').value;
         if(!name) return;
-        const { error } = await _sb.from('rooms').insert([{ name, password: pass || null, host_id: 'Dat' }]);
-        if(!error) { fetchRooms(); document.getElementById('new-room-name').value = ''; document.getElementById('new-room-pass').value = ''; }
+        await _sb.from('rooms').insert([{ name, password: pass || null, host_id: 'Dat' }]);
+        fetchRooms();
     }
 
     async function joinRoom(id, name, pass) {
         if(pass && pass !== 'null' && !isAdmin) {
-            if(prompt("パスワードを入力:") !== pass) return alert("パスワードが違います");
+            if(prompt("パスワード:") !== pass) return alert("不一致");
         }
         currentRoomId = id;
         document.getElementById('room-title').innerText = name;
+        
+        // 以前の購読を解除
+        if (messageSubscription) _sb.removeChannel(messageSubscription);
+        
         fetchMessages();
-        _sb.channel('room_msg').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${id}` }, () => fetchMessages()).subscribe();
+
+        // リアルタイム購読を最新化
+        messageSubscription = _sb.channel(`room-${id}`)
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${id}` }, 
+            (payload) => {
+                appendSingleMessage(payload.new);
+            })
+            .subscribe();
     }
 
     async function sendMsg() {
-        if(!currentRoomId) return;
+        if(!currentRoomId) return alert("部屋を選んで");
         const content = document.getElementById('chat-input').value;
         if(!content) return;
         await _sb.from('messages').insert([{ room_id: currentRoomId, user_name: 'Dat', content }]);
@@ -158,12 +141,20 @@
     async function fetchMessages() {
         const { data } = await _sb.from('messages').select('*').eq('room_id', currentRoomId).order('created_at', { ascending: true });
         const list = document.getElementById('message-list');
-        list.innerHTML = (data || []).map(m => `
-            <div class="msg ${m.user_name === 'Dat' ? 'mine' : 'other'}">
-                <div style="font-size:0.7rem; opacity:0.6;">${m.user_name}</div>
-                <div>${m.content}</div>
-            </div>
-        `).join('');
+        list.innerHTML = (data || []).map(m => createMessageHTML(m)).join('');
+        list.scrollTop = list.scrollHeight;
+    }
+
+    function createMessageHTML(m) {
+        return `<div class="msg ${m.user_name === 'Dat' ? 'mine' : 'other'}">
+                    <div style="font-size:0.7rem; opacity:0.6;">${m.user_name}</div>
+                    <div>${m.content}</div>
+                </div>`;
+    }
+
+    function appendSingleMessage(m) {
+        const list = document.getElementById('message-list');
+        list.innerHTML += createMessageHTML(m);
         list.scrollTop = list.scrollHeight;
     }
 
@@ -172,26 +163,14 @@
             isAdmin = true;
             document.getElementById('admin-badge').classList.remove('hidden');
             document.getElementById('auth-section').classList.add('hidden');
-            renderRooms();
-            alert("管理者として認証されました。全部屋の削除権限を有効化します。");
+            renderRooms(); // ボタンを出すために再描画
         }
     }
 
     async function forceDeleteRoom(id, name) {
-        // 分かりやすい確認通知
-        const confirmed = confirm(`【警告】\n部屋「${name}」を完全に削除しますか？\nこの操作は取り消せません。`);
-        
-        if(confirmed) {
-            const { error } = await _sb.from('rooms').delete().eq('id', id);
-            if(!error) {
-                if(currentRoomId === id) {
-                    currentRoomId = null;
-                    document.getElementById('room-title').innerText = "部屋を選んでね";
-                    document.getElementById('message-list').innerHTML = "";
-                }
-                fetchRooms();
-                alert("部屋を削除しました。");
-            }
+        if(confirm(`部屋「${name}」を削除しますか？`)) {
+            await _sb.from('rooms').delete().eq('id', id);
+            fetchRooms();
         }
     }
 
