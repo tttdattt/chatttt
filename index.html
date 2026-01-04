@@ -37,7 +37,7 @@
 <body>
 
 <section>
-    <div class="header">Rooms</div>
+    <div class="header">部屋一覧</div>
     <div class="scroll">
         <div class="card">
             <input type="text" id="r-name" placeholder="部屋名">
@@ -59,17 +59,17 @@
 </section>
 
 <section>
-    <div class="header">Settings & Admin</div>
+    <div class="header">設定と管理</div>
     <div class="scroll">
         <div id="ban-display" class="card hidden" style="border-color:var(--danger);color:var(--danger);text-align:center;font-weight:bold;">⚠️ サイト機能制限中</div>
         <div id="role-badge-area" class="hidden" style="text-align:center;"></div>
-        <div class="card"><h4>Profile</h4><input type="text" id="u-name" value="" onchange="nameUpdate()"></div>
-        <div id="auth-box" class="card"><h4>Admin Login</h4><input type="password" id="a-code" placeholder="暗号入力"><button class="btn" onclick="auth()">認証</button></div>
+        <div class="card"><h4>プロフィール</h4><input type="text" id="u-name" value="" onchange="nameUpdate()"></div>
+        <div id="auth-box" class="card"><h4>管理者ログイン</h4><input type="password" id="a-code" placeholder="暗号入力"><button class="btn" onclick="auth()">認証</button></div>
         <div id="admin-tools" class="hidden">
             <div id="room-action-area" class="card hidden"><button class="btn" style="background:var(--danger);color:#fff;" onclick="delRoom()">🗑️ この部屋を削除</button></div>
             <div class="card"><p style="font-size:0.8rem; cursor:pointer;" onclick="copyDiscord()">📞 問い合わせ: <span style="color:var(--accent)">dr.3ko_</span></p></div>
-            <div class="card"><h4>Realtime Users</h4><div id="user-ctrl-list" style="font-size:0.75rem;"></div></div>
-            <div class="card" style="border-color:var(--danger)"><h4>Blacklist (Bans)</h4><div id="blacklist-ui" style="font-size:0.75rem;"></div></div>
+            <div class="card"><h4>接続中のユーザー</h4><div id="user-ctrl-list" style="font-size:0.75rem;"></div></div>
+            <div class="card" style="border-color:var(--danger)"><h4>ブラックリスト</h4><div id="blacklist-ui" style="font-size:0.75rem;"></div></div>
             <div style="text-align:center; font-size:0.8rem; opacity:0.7; margin-top:20px;">👑 総責任者: ダット</div>
         </div>
     </div>
@@ -115,7 +115,7 @@
         const c = document.getElementById('a-code').value;
         if(c === 'datto0n0can') applyRole("Admin");
         else if(c === 'datto0n0fuku') applyRole("Fuku");
-        else alert("Invalid code");
+        else alert("無効なコード");
     }
 
     function applyRole(newRole) {
@@ -128,14 +128,14 @@
         updateBlacklistUI();
     }
 
-    function logout() { if(confirm("Logout?")) { localStorage.removeItem('userRole'); location.reload(); } }
+    function logout() { if(confirm("ログアウトしますか？")) { localStorage.removeItem('userRole'); location.reload(); } }
 
     async function joinRoom(id, n, p) {
         if(isSiteBanned) return alert("BAN中");
         if(bannedRooms.includes(id)) return alert("追放中");
         if(p && p !== "null" && p.trim() !== "" && role === "User") { 
-            const inputP = prompt("Password:"); 
-            if(inputP !== p) return alert("Incorrect password"); 
+            const inputP = prompt("パスワード："); 
+            if(inputP !== p) return alert("パスワードが違います"); 
         }
         curRoomId = id;
         document.getElementById('room-title').innerText = n;
@@ -172,7 +172,7 @@
         const ext = file.name.split('.').pop();
         const path = `${Date.now()}.${ext}`;
         const { data, error } = await _sb.storage.from('images').upload(path, file);
-        if(error) return alert("Upload Error: " + error.message);
+        if(error) return alert("アップロードエラー：" + error.message);
         const { data: urlData } = _sb.storage.from('images').getPublicUrl(path);
         await _sb.from('messages').insert([{ room_id: curRoomId, user_name: myName, image_url: urlData.publicUrl }]);
         input.value = '';
@@ -211,9 +211,9 @@
     async function delRoom() { if(confirm("削除？")) { await _sb.from('rooms').delete().eq('id', curRoomId); clearChat(); } }
     function clearChat() { curRoomId = null; document.getElementById('room-title').innerText = "部屋を選択してください"; document.getElementById('msg-list').innerHTML = ""; document.getElementById('input-area').classList.add('hidden'); document.getElementById('room-action-area').classList.add('hidden'); }
     function nameUpdate() { myName = document.getElementById('u-name').value; localStorage.setItem('userName', myName); checkSiteBan(); }
-    function copyDiscord() { navigator.clipboard.writeText('dr.3ko_'); alert("Copied"); }
+    function copyDiscord() { navigator.clipboard.writeText('dr.3ko_'); alert("コピーしました"); }
     function punish(type, target) { roomChannel.send({ type: 'broadcast', event: type, payload: { uid: target } }); }
-    async function siteBan(tName) { if(confirm(tName+" をBAN？")) await _sb.from('bans').insert([{ user_name: tName }]); }
+    async function siteBan(tName) { if(confirm(tName+" をBANしますか？")) await _sb.from('bans').insert([{ user_name: tName }]); }
     async function updateBlacklistUI() { if(role === "User") return; const { data } = await _sb.from('bans').select('*'); document.getElementById('blacklist-ui').innerHTML = data.map(u => `<div style="display:flex; justify-content:space-between; margin-bottom:5px;"><span>${u.user_name}</span><button class="admin-btn" style="background:green" onclick="unban('${u.user_name}')">解除</button></div>`).join('') || "なし"; }
     async function unban(tName) { await _sb.from('bans').delete().eq('user_name', tName); }
     window.onload = () => { getRooms(); checkSiteBan(); if(role !== "User") applyRole(role); };
